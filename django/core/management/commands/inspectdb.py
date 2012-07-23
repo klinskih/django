@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 import keyword
 from optparse import make_option
 
 from django.core.management.base import NoArgsCommand, CommandError
-from django.db import connections, DEFAULT_DB_ALIAS
+from django.db import connections, DEFAULT_DB_ALIAS , models
 
 class Command(NoArgsCommand):
     help = "Introspects the database tables in the given database and outputs a Django model module."
@@ -26,8 +27,6 @@ class Command(NoArgsCommand):
 
     def handle_inspection(self, options):
         connection = connections[options.get('database')]
-        # 'table_name_filter' is a stealth option
-        table_name_filter = options.get('table_name_filter')
 
         table2model = lambda table_name: table_name.title().replace('_', '').replace(' ', '').replace('-', '')
 
@@ -42,14 +41,15 @@ class Command(NoArgsCommand):
         yield "# into your database."
         yield ''
         yield 'from %s import models' % self.db_module
+        yield 'from admin.model import *'
+        yield 'from mptt.models import MPTTModel, TreeForeignKey'
         yield ''
-        known_models = []
-        for table_name in connection.introspection.table_names(cursor):
-            if table_name_filter is not None and callable(table_name_filter):
-                if not table_name_filter(table_name):
-                    continue
-            yield 'class %s(models.Model):' % table2model(table_name)
-            known_models.append(table2model(table_name))
+        for table_name in connection.introspection.get_table_list(cursor):
+            #yield 'class %s(models.Model):' % table2model(table_name)
+            if table2model(table_name) =='AdminDocs':
+        	yield 'class %s(MPTTModel):' % table2model(table_name)
+    	    else:
+        	yield 'class %s(BaseModel):' % table2model(table_name)
             try:
                 relations = connection.introspection.get_relations(cursor, table_name)
             except NotImplementedError:
@@ -73,6 +73,7 @@ class Command(NoArgsCommand):
                 if column_name in indexes:
                     if indexes[column_name]['primary_key']:
                         extra_params['primary_key'] = True
+                        #field_type == 'AutoField('
                     elif indexes[column_name]['unique']:
                         extra_params['unique'] = True
 
@@ -89,13 +90,10 @@ class Command(NoArgsCommand):
                     comment_notes.append('Field name made lowercase.')
 
                 if i in relations:
+            	    #continue
                     rel_to = relations[i][1] == table_name and "'self'" or table2model(relations[i][1])
-
-                    if rel_to in known_models:
-                        field_type = 'ForeignKey(%s' % rel_to
-                    else:
-                        field_type = "ForeignKey('%s'" % rel_to
-
+                    field_type = 'ForeignKey(%s,%s' % (rel_to,'related_name="%(class)s"')
+                    field_type =field_type
                     if att_name.endswith('_id'):
                         att_name = att_name[:-3]
                     else:
@@ -123,15 +121,38 @@ class Command(NoArgsCommand):
                 # that's assumed if it doesn't exist.
                 if att_name == 'id' and field_type == 'AutoField(' and extra_params == {'primary_key': True}:
                     continue
-
+            #    if att_name == 'id' or row[9]==0:
+            #	    extra_params['editable']=False
+		if att_name == 'id' and not extra_params == {'primary_key': True}:
+                    att_name= 'rid'
+		#Проверка для модуля дерева
+		if table2model(table_name) =='AdminDocs' and att_name=='parent_id':
+		    rel_to = "'self'"
+		    att_name='parent'
+		    del extra_params['db_column']
+		    
+                    field_type = 'TreeForeignKey(%s,%s' % (rel_to,'related_name="children"')
+                    field_type =field_type
                 # Add 'null' and 'blank', if the 'null_ok' flag was present in the
                 # table description.
                 if row[6]: # If it's NULL...
                     extra_params['blank'] = True
-                    if not field_type in ('TextField(', 'CharField('):
+                    if not field_type in ('TextField(', 'CharField(','BooleanField('):
                         extra_params['null'] = True
-
-                field_desc = '%s = models.%s' % (att_name, field_type)
+		#Добавляем представления полей на форме
+		#if not row[7]==None:
+		if row[7]:
+		    extra_params['verbose_name']=row[7]
+		if row[8]:
+		    extra_params['help_text']=row[8]
+		if not field_type in models.__dict__:
+		    if table2model(table_name) =='AdminDocs' and att_name=='parent':
+			field_desc = '%s = %s' % (att_name, field_type)
+		    else:
+			field_desc = '%s = models.%s' % (att_name, field_type)
+                else:
+            	    field_desc = '%s = custom_fields.%s' % (att_name, field_type)
+            	
                 if extra_params:
                     if not field_desc.endswith('('):
                         field_desc += ', '
@@ -142,6 +163,7 @@ class Command(NoArgsCommand):
                 yield '    %s' % field_desc
             for meta_line in self.get_meta(table_name):
                 yield meta_line
+            
 
     def get_field_type(self, connection, table_name, row):
         """
@@ -180,6 +202,16 @@ class Command(NoArgsCommand):
         to construct the inner Meta class for the model corresponding
         to the given database table name.
         """
+        if table_name =='admin_docs':
+    	    return ['    class Meta:',
+                '        db_table = %r' % table_name,
+#                '        abstract=True',
+                '    class MPTTMeta:',
+                "        order_insertion_by = ['name']",
+                '']
+    
+                
         return ['    class Meta:',
                 '        db_table = %r' % table_name,
+#                '        abstract=True',
                 '']
