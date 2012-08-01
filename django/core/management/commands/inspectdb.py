@@ -31,7 +31,7 @@ class Command(NoArgsCommand):
         table2model = lambda table_name: table_name.title().replace('_', '').replace(' ', '').replace('-', '')
 
         cursor = connection.cursor()
-        yield "# This is an auto-generated Django model module."
+        yield "#This is an auto-generated Django model module."
         yield "# You'll have to do the following manually to clean this up:"
         yield "#     * Rearrange models' order"
         yield "#     * Make sure each model has one field with primary_key=True"
