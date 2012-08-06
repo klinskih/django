@@ -3,7 +3,7 @@ import keyword
 from optparse import make_option
 
 from django.core.management.base import NoArgsCommand, CommandError
-from django.db import connections, DEFAULT_DB_ALIAS , models
+from django.db import connections, DEFAULT_DB_ALIAS, models
 
 class Command(NoArgsCommand):
     help = "Introspects the database tables in the given database and outputs a Django model module."
@@ -11,8 +11,8 @@ class Command(NoArgsCommand):
     option_list = NoArgsCommand.option_list + (
         make_option('--database', action='store', dest='database',
             default=DEFAULT_DB_ALIAS, help='Nominates a database to '
-                'introspect.  Defaults to using the "default" database.'),
-    )
+                                           'introspect.  Defaults to using the "default" database.'),
+        )
 
     requires_model_validation = False
 
@@ -46,10 +46,10 @@ class Command(NoArgsCommand):
         yield ''
         for table_name in connection.introspection.get_table_list(cursor):
             #yield 'class %s(models.Model):' % table2model(table_name)
-            if table2model(table_name) =='AdminDocs':
-        	yield 'class %s(MPTTModel):' % table2model(table_name)
-    	    else:
-        	yield 'class %s(BaseModel):' % table2model(table_name)
+            if table2model(table_name) == 'AdminDocs':
+                yield 'class %s(MPTTModel):' % table2model(table_name)
+            else:
+                yield 'class %s(BaseModel):' % table2model(table_name)
             try:
                 relations = connection.introspection.get_relations(cursor, table_name)
             except NotImplementedError:
@@ -90,10 +90,10 @@ class Command(NoArgsCommand):
                     comment_notes.append('Field name made lowercase.')
 
                 if i in relations:
-            	    #continue
+                    #continue
                     rel_to = relations[i][1] == table_name and "'self'" or table2model(relations[i][1])
-                    field_type = 'ForeignKey(%s,%s' % (rel_to,'related_name="%(class)s"')
-                    field_type =field_type
+                    field_type = 'ForeignKey(%s,%s' % (rel_to, 'related_name="%(class)s"')
+                    field_type = field_type
                     if att_name.endswith('_id'):
                         att_name = att_name[:-3]
                     else:
@@ -115,44 +115,43 @@ class Command(NoArgsCommand):
                     att_name = 'number_%s' % att_name
                     extra_params['db_column'] = unicode(column_name)
                     comment_notes.append("Field renamed because it wasn't a "
-                        "valid Python identifier.")
+                                         "valid Python identifier.")
 
                 # Don't output 'id = meta.AutoField(primary_key=True)', because
                 # that's assumed if it doesn't exist.
                 if att_name == 'id' and field_type == 'AutoField(' and extra_params == {'primary_key': True}:
                     continue
-            #    if att_name == 'id' or row[9]==0:
-            #	    extra_params['editable']=False
-		if att_name == 'id' and not extra_params == {'primary_key': True}:
-                    att_name= 'rid'
-		#Проверка для модуля дерева
-		if table2model(table_name) =='AdminDocs' and att_name=='parent_id':
-		    rel_to = "'self'"
-		    att_name='parent'
-		    del extra_params['db_column']
-		    
-                    field_type = 'TreeForeignKey(%s,%s' % (rel_to,'related_name="children"')
-                    field_type =field_type
-                # Add 'null' and 'blank', if the 'null_ok' flag was present in the
+                    #    if att_name == 'id' or row[9]==0:
+                    #	    extra_params['editable']=False
+                if att_name == 'id' and not extra_params == {'primary_key': True}:
+                    att_name = 'rid'
+                #Проверка для модуля дерева
+                if table2model(table_name) == 'AdminDocs' and att_name == 'parent':
+                    rel_to = "'self'"
+                    #att_name = 'parent'
+                    field_type = 'TreeForeignKey(%s,%s' % (rel_to, 'related_name="children"')
+                    del extra_params['db_column']
+                    # Add 'null' and 'blank', if the 'null_ok' flag was present in the
                 # table description.
+
                 if row[6]: # If it's NULL...
                     extra_params['blank'] = True
-                    if not field_type in ('TextField(', 'CharField(','BooleanField('):
+                    if not field_type in ('TextField(', 'CharField(', 'BooleanField('):
                         extra_params['null'] = True
-		#Добавляем представления полей на форме
-		#if not row[7]==None:
-		if row[7]:
-		    extra_params['verbose_name']=row[7]
-		if row[8]:
-		    extra_params['help_text']=row[8]
-		if not field_type in models.__dict__:
-		    if table2model(table_name) =='AdminDocs' and att_name=='parent':
-			field_desc = '%s = %s' % (att_name, field_type)
-		    else:
-			field_desc = '%s = models.%s' % (att_name, field_type)
+                #Добавляем представления полей на форме
+                #if not row[7]==None:
+                if row[7]:
+                    extra_params['verbose_name'] = row[7]
+                if row[8]:
+                    extra_params['help_text'] = row[8]
+                if not field_type in models.__dict__:
+                    if table2model(table_name) == 'AdminDocs' and att_name == 'parent':
+                        field_desc = '%s = %s' % (att_name, field_type)
+                    else:
+                        field_desc = '%s = models.%s' % (att_name, field_type)
                 else:
-            	    field_desc = '%s = custom_fields.%s' % (att_name, field_type)
-            	
+                    field_desc = '%s = custom_fields.%s' % (att_name, field_type)
+
                 if extra_params:
                     if not field_desc.endswith('('):
                         field_desc += ', '
@@ -163,7 +162,7 @@ class Command(NoArgsCommand):
                 yield '    %s' % field_desc
             for meta_line in self.get_meta(table_name):
                 yield meta_line
-            
+
 
     def get_field_type(self, connection, table_name, row):
         """
@@ -202,16 +201,15 @@ class Command(NoArgsCommand):
         to construct the inner Meta class for the model corresponding
         to the given database table name.
         """
-        if table_name =='admin_docs':
-    	    return ['    class Meta:',
-                '        db_table = %r' % table_name,
-#                '        abstract=True',
-                '    class MPTTMeta:',
-                "        order_insertion_by = ['name']",
-                '']
-    
-                
+        if table_name == 'admin_docs':
+            return ['    class Meta:',
+                    '        db_table = %r' % table_name,
+                    #                '        abstract=True',
+                    '    class MPTTMeta:',
+                    "        order_insertion_by = ['name']",
+                    '']
+
         return ['    class Meta:',
                 '        db_table = %r' % table_name,
-#                '        abstract=True',
+                #                '        abstract=True',
                 '']
