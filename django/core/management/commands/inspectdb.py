@@ -93,7 +93,7 @@ class Command(NoArgsCommand):
                     #continue
                     rel_to = relations[i][1] == table_name and "'self'" or table2model(relations[i][1])
                     rel_to = "'%s'" % rel_to
-                    field_type = 'ForeignKey(%s,%s' % (rel_to, 'related_name="%(class)s"')
+                    field_type = 'ForeignKey(%s,%s' % (rel_to, ('related_name="%s '%att_name)+'%(class)s"')
                     field_type = field_type
                     if att_name.endswith('_id'):
                         att_name = att_name[:-3]
