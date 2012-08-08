@@ -47,9 +47,9 @@ class Command(NoArgsCommand):
         for table_name in connection.introspection.get_table_list(cursor):
             #yield 'class %s(models.Model):' % table2model(table_name)
             if table2model(table_name) == 'AdminDocs':
-                yield 'class %s(MPTTModel):' % table2model(table_name)
+                yield 'class %sA(MPTTModel):' % table2model(table_name)
             else:
-                yield 'class %s(BaseModel):' % table2model(table_name)
+                yield 'class %sA(BaseModel):' % table2model(table_name)
             try:
                 relations = connection.introspection.get_relations(cursor, table_name)
             except NotImplementedError:
@@ -205,12 +205,12 @@ class Command(NoArgsCommand):
         if table_name == 'admin_docs':
             return ['    class Meta:',
                     '        db_table = %r' % table_name,
-                    #                '        abstract=True',
+                                    '        abstract=True',
                     '    class MPTTMeta:',
                     "        order_insertion_by = ['name']",
                     '']
 
         return ['    class Meta:',
                 '        db_table = %r' % table_name,
-                #                '        abstract=True',
+                                '        abstract=True',
                 '']
