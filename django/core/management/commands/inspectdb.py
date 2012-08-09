@@ -43,13 +43,17 @@ class Command(NoArgsCommand):
         yield 'from %s import models' % self.db_module
         yield 'from admin.model import *'
         yield 'from mptt.models import MPTTModel, TreeForeignKey'
+        yield 'from django.contrib.auth.models import User'
         yield ''
         for table_name in connection.introspection.get_table_list(cursor):
             #yield 'class %s(models.Model):' % table2model(table_name)
+            if table2model(table_name) == 'AuthUser':
+                continue
             if table2model(table_name) == 'AdminDocs':
                 yield 'class %sA(MPTTModel):' % table2model(table_name)
             else:
                 yield 'class %sA(BaseModel):' % table2model(table_name)
+
             try:
                 relations = connection.introspection.get_relations(cursor, table_name)
             except NotImplementedError:
@@ -92,9 +96,14 @@ class Command(NoArgsCommand):
                 if i in relations:
                     #continue
                     rel_to = relations[i][1] == table_name and "'self'" or table2model(relations[i][1])
-                    rel_to = "'%s'" % rel_to
-                    field_type = 'ForeignKey(%s,%s' % (rel_to, ('related_name="%s '%att_name)+'%(class)s"')
+                    if rel_to=='AuthUser':
+                        rel_to='User'
+                        field_type = 'OneToOneField(%s,%s' % (rel_to, ('related_name="%s '%att_name)+'%(class)s"')
+                    else:
+                        rel_to = "'%s'" % rel_to
+                        field_type = 'ForeignKey(%s,%s' % (rel_to, ('related_name="%s '%att_name)+'%(class)s"')
                     field_type = field_type
+
                     if att_name.endswith('_id'):
                         att_name = att_name[:-3]
                     else:
