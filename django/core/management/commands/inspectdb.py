@@ -98,10 +98,10 @@ class Command(NoArgsCommand):
                     rel_to = relations[i][1] == table_name and "'self'" or table2model(relations[i][1])
                     if rel_to=='AuthUser':
                         rel_to='User'
-                        field_type = 'OneToOneField(%s,%s' % (rel_to, ('related_name="%s '%att_name)+'%(class)s"')
+                        field_type = 'OneToOneField(%s,%s' % (rel_to, ('related_name="%s_'%att_name)+'%(class)s"')
                     else:
                         rel_to = "'%s'" % rel_to
-                        field_type = 'ForeignKey(%s,%s' % (rel_to, ('related_name="%s '%att_name)+'%(class)s"')
+                        field_type = 'ForeignKey(%s,%s' % (rel_to, ('related_name="%s_'%att_name)+'%(class)s"')
                     field_type = field_type
 
                     if att_name.endswith('_id'):
