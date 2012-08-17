@@ -437,6 +437,10 @@ parameter when declaring the form field::
             class Meta:
                 model = Article
 
+    You must ensure that the type of the form field can be used to set the
+    contents of the corresponding model field. When they are not compatible,
+    you will get a ``ValueError`` as no implicit conversion takes place.
+
     See the :doc:`form field documentation </ref/forms/fields>` for more information
     on fields and their arguments.
 
@@ -877,7 +881,8 @@ of a model. Here's how you can do that::
             formset = BookInlineFormSet(request.POST, request.FILES, instance=author)
             if formset.is_valid():
                 formset.save()
-                # Do something.
+                # Do something. Should generally end with a redirect. For example:
+                return HttpResponseRedirect(author.get_absolute_url())
         else:
             formset = BookInlineFormSet(instance=author)
         return render_to_response("manage_books.html", {
